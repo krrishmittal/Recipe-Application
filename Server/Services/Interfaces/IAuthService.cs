@@ -5,8 +5,8 @@ namespace Server.Services.Interfaces;
 
 public interface IAuthService
 {
-    Task<AuthResponse?> RegisterAsync(RegisterRequest request);
-    Task<AuthResponse?> LoginAsync(LoginRequest request);
-    Task<bool> ForgotPasswordAsync(ForgotPasswordRequest request);
-    Task<bool> ResetPasswordAsync(ResetPasswordRequest request);
+    Task<ApiResponse<AuthResponse>> RegisterAsync(RegisterRequest request);
+    Task<ApiResponse<AuthResponse>> LoginAsync(LoginRequest request);
+    Task<ApiResponse<bool>> ForgotPasswordAsync(ForgotPasswordRequest request);
+    Task<ApiResponse<bool>> ResetPasswordAsync(ResetPasswordRequest request);
 }

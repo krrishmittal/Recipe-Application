@@ -5,11 +5,11 @@ namespace Server.Services.Interfaces
 {
     public interface IRecipeService
     {
-        Task<List<RecipeResponse>> GetAllAsync();
-        Task<List<RecipeResponse>>GetMyRecipesAsync();
-        Task<RecipeResponse> GetByIdAsync(int id);
-        Task<RecipeResponse> CreateAsync(int userId, CreateRecipeRequest request);
-        Task<RecipeResponse>UpdateAsync(int id, int userId, UpdateRecipeRequest request);
-        Task<bool>DeleteAsync(int id, int userId);
+        Task<ApiResponse<PagedResponse<RecipeResponse>>> GetAllAsync(PagedRequest request);
+        Task<ApiResponse<PagedResponse<RecipeResponse>>> GetMyRecipesAsync(PagedRequest request);
+        Task<ApiResponse<RecipeResponse>> GetByIdAsync(int id);
+        Task<ApiResponse<RecipeResponse>> CreateAsync(int userId, CreateRecipeRequest request);
+        Task<ApiResponse<RecipeResponse>> UpdateAsync(int id, int userId, UpdateRecipeRequest request);
+        Task<ApiResponse<bool>> DeleteAsync(int id, int userId);
     }
 }

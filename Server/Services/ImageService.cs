@@ -31,8 +31,7 @@ public class ImageService : IImageService
         if (!allowedTypes.Contains(file.ContentType.ToLower()))
             throw new ArgumentException("Only JPEG, PNG and WEBP images are allowed.");
 
-        if (file.Length > 5 * 1024 * 1024)
-            throw new ArgumentException("File size must be less than 5MB.");
+
 
         await using var stream = file.OpenReadStream();
         var uploadParams = new ImageUploadParams

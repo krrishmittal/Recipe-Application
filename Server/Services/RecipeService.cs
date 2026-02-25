@@ -15,12 +15,9 @@ public class RecipeService : IRecipeService
     private readonly IMapper _mapper;
     private readonly ILogger<RecipeService> _logger;
     private readonly IHttpContextAccessor _httpContextAccessor;
-    public RecipeService(
-        IRecipeRepository recipeRepo,
-        IImageService imageService,
-        IMapper mapper,
-        ILogger<RecipeService> logger,
-        IHttpContextAccessor httpContextAccessor)
+
+    public RecipeService(IRecipeRepository recipeRepo, IImageService imageService,
+        IMapper mapper, ILogger<RecipeService> logger, IHttpContextAccessor httpContextAccessor)
     {
         _recipeRepo = recipeRepo;
         _imageService = imageService;
@@ -29,88 +26,158 @@ public class RecipeService : IRecipeService
         _httpContextAccessor = httpContextAccessor;
     }
 
-    public async Task<List<RecipeResponse>> GetAllAsync()
+    public async Task<ApiResponse<PagedResponse<RecipeResponse>>> GetAllAsync(PagedRequest request)
     {
-        _logger.LogInformation("Fetching recipes page:");
-
-        var recipes = await _recipeRepo.GetAllAsync();
-
-        return _mapper.Map<List<RecipeResponse>>(recipes);
-    }
-
-    public async Task<List<RecipeResponse>> GetMyRecipesAsync()
-    {
-        var userId = int.Parse(_httpContextAccessor.HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-        _logger.LogInformation("Fetching recipes for userId: {UserId}", userId);
-        var recipes = await _recipeRepo.GetMyRecipesAsync(userId); 
-        _logger.LogInformation("Found {Count} recipes for userId: {UserId}", recipes.Count, userId);
-        return _mapper.Map<List<RecipeResponse>>(recipes);
-    }
-    public async Task<RecipeResponse?> GetByIdAsync(int id)
-    {
-        _logger.LogInformation("Fetching recipe id: {Id}", id);
-        var recipe = await _recipeRepo.GetByIdAsync(id);
-        if (recipe is null)
+        try
         {
-            _logger.LogWarning("Recipe not found with id: {Id}", id);
-            return null;
+            _logger.LogInformation("Fetching all recipes - Page: {Page}, Search: {Search}",
+                request.Page, request.Search);
+
+            var (recipes, totalCount) = await _recipeRepo.GetAllAsync(request);
+
+            var result = new PagedResponse<RecipeResponse>
+            {
+                Items = _mapper.Map<List<RecipeResponse>>(recipes),
+                TotalCount = totalCount,
+                Page = request.Page,
+                PageSize = request.PageSize
+            };
+
+            return ApiResponse<PagedResponse<RecipeResponse>>.Ok(result);
         }
-        return _mapper.Map<RecipeResponse>(recipe);
-    }
-
-    public async Task<RecipeResponse> CreateAsync(int userId, CreateRecipeRequest request)
-    {
-        _logger.LogInformation("Creating recipe for userId: {UserId}", userId);
-
-        var recipe = _mapper.Map<Recipe>(request);
-        recipe.UserId = userId;
-
-        // Upload image if it is provided by the user
-        if (request.Image is not null && request.Image.Length > 0)
+        catch (Exception ex)
         {
-            _logger.LogInformation("Uploading image for new recipe");
-            recipe.ImageUrl = await _imageService.UploadImageAsync(request.Image);
+            _logger.LogError(ex, "Unexpected error in {Method}", nameof(GetAllAsync));
+            return ApiResponse<PagedResponse<RecipeResponse>>.Fail("Something went wrong.", 500, nameof(GetAllAsync));
         }
-
-        var created = await _recipeRepo.CreateAsync(recipe);
-        _logger.LogInformation("Recipe created with id: {Id}", created.Id);
-        return _mapper.Map<RecipeResponse>(created);
     }
 
-    public async Task<RecipeResponse?> UpdateAsync(int id, int userId, UpdateRecipeRequest request)
+    public async Task<ApiResponse<PagedResponse<RecipeResponse>>> GetMyRecipesAsync(PagedRequest request)
     {
-        _logger.LogInformation("Updating recipe id: {Id}", id);
-
-        var recipe = await _recipeRepo.GetByIdAsync(id);
-        if (recipe is null || recipe.UserId != userId)
+        try
         {
-            _logger.LogWarning("Recipe not found or unauthorized id: {Id}", id);
-            return null;
+            var userId = int.Parse(_httpContextAccessor.HttpContext!.User
+                .FindFirstValue(ClaimTypes.NameIdentifier)!);
+
+            _logger.LogInformation("Fetching recipes for userId: {UserId} - Page: {Page}, Search: {Search}",
+                userId, request.Page, request.Search);
+
+            var (recipes, totalCount) = await _recipeRepo.GetMyRecipesAsync(userId, request);
+
+            _logger.LogInformation("Found {Count} total recipes for userId: {UserId}", totalCount, userId);
+
+            var result = new PagedResponse<RecipeResponse>
+            {
+                Items = _mapper.Map<List<RecipeResponse>>(recipes),
+                TotalCount = totalCount,
+                Page = request.Page,
+                PageSize = request.PageSize
+            };
+
+            return ApiResponse<PagedResponse<RecipeResponse>>.Ok(result);
         }
-
-        _mapper.Map(request, recipe);
-
-        // Upload new image if provided
-        //if (request.Image is not null && request.Image.Length > 0)
-        //{
-        //    // Delete old image first
-        //    if (!string.IsNullOrEmpty(recipe.ImageUrl))
-        //        await _imageService.DeleteImageAsync(recipe.ImageUrl);
-
-        //    _logger.LogInformation("Uploading new image for recipe id: {Id}", id);
-        //    recipe.ImageUrl = await _imageService.UploadImageAsync(request.Image);
-        //}
-
-        var updated = await _recipeRepo.UpdateAsync(recipe);
-        _logger.LogInformation("Recipe updated with id: {Id}", id);
-        return _mapper.Map<RecipeResponse>(updated);
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error in {Method}", nameof(GetMyRecipesAsync));
+            return ApiResponse<PagedResponse<RecipeResponse>>.Fail("Something went wrong.", 500, nameof(GetMyRecipesAsync));
+        }
     }
 
-    public async Task<bool> DeleteAsync(int id, int userId)
+
+    public async Task<ApiResponse<RecipeResponse>> GetByIdAsync(int id)
     {
-        _logger.LogInformation("Deleting recipe id: {Id}", id);
-        var result = await _recipeRepo.DeleteAsync(id, userId);
-        if (!result) _logger.LogWarning("Recipe not found or unauthorized for id: {Id}", id);
-        return result;
+        try
+        {
+            _logger.LogInformation("Fetching recipe id: {Id}", id);
+            var recipe = await _recipeRepo.GetByIdAsync(id);
+
+            if (recipe is null)
+            {
+                _logger.LogWarning("Recipe not found with id: {Id}", id);
+                return ApiResponse<RecipeResponse>.Fail("Recipe not found.", 404, nameof(GetByIdAsync));
+            }
+
+            return ApiResponse<RecipeResponse>.Ok(_mapper.Map<RecipeResponse>(recipe));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error in {Method}", nameof(GetByIdAsync));
+            return ApiResponse<RecipeResponse>.Fail("Something went wrong.", 500, nameof(GetByIdAsync));
+        }
+    }
+
+    public async Task<ApiResponse<RecipeResponse>> CreateAsync(int userId, CreateRecipeRequest request)
+    {
+        try
+        {
+            _logger.LogInformation("Creati ng recipe for userId: {UserId}", userId);
+
+            var recipe = _mapper.Map<Recipe>(request);
+            recipe.UserId = userId;
+
+            if (request.Image is not null && request.Image.Length > 0)
+            {
+                _logger.LogInformation("Uploading image for new recipe");
+                recipe.ImageUrl = await _imageService.UploadImageAsync(request.Image);
+            }
+
+            var created = await _recipeRepo.CreateAsync(recipe);
+            _logger.LogInformation("Recipe created with id: {Id}", created.Id);
+
+            return ApiResponse<RecipeResponse>.Ok(_mapper.Map<RecipeResponse>(created), "Recipe created successfully.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error in {Method}", nameof(CreateAsync));
+            return ApiResponse<RecipeResponse>.Fail("Something went wrong.", 500, nameof(CreateAsync));
+        }
+    }
+
+    public async Task<ApiResponse<RecipeResponse>> UpdateAsync(int id, int userId, UpdateRecipeRequest request)
+    {
+        try
+        {
+            _logger.LogInformation("Updating recipe id: {Id}", id);
+
+            var recipe = await _recipeRepo.GetByIdAsync(id);
+            if (recipe is null || recipe.UserId != userId)
+            {
+                _logger.LogWarning("Recipe not found or unauthorized id: {Id}", id);
+                return ApiResponse<RecipeResponse>.Fail("Recipe not found or you are not the owner.", 404, nameof(UpdateAsync));
+            }
+
+            _mapper.Map(request, recipe);
+            var updated = await _recipeRepo.UpdateAsync(recipe);
+            _logger.LogInformation("Recipe updated with id: {Id}", id);
+
+            return ApiResponse<RecipeResponse>.Ok(_mapper.Map<RecipeResponse>(updated), "Recipe updated successfully.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error in {Method}", nameof(UpdateAsync));
+            return ApiResponse<RecipeResponse>.Fail("Something went wrong.", 500, nameof(UpdateAsync));
+        }
+    }
+
+    public async Task<ApiResponse<bool>> DeleteAsync(int id, int userId)
+    {
+        try
+        {
+            _logger.LogInformation("Deleting recipe id: {Id}", id);
+            var result = await _recipeRepo.DeleteAsync(id, userId);
+
+            if (!result)
+            {
+                _logger.LogWarning("Recipe not found or unauthorized for id: {Id}", id);
+                return ApiResponse<bool>.Fail("Recipe not found or you are not the owner.", 404, nameof(DeleteAsync));
+            }
+
+            return ApiResponse<bool>.Ok(true, "Recipe deleted successfully.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error in {Method}", nameof(DeleteAsync));
+            return ApiResponse<bool>.Fail("Something went wrong.", 500, nameof(DeleteAsync));
+        }
     }
 }

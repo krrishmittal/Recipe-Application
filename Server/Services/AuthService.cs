@@ -15,119 +15,148 @@ public class AuthService : IAuthService
     private readonly IConfiguration _config;
     private readonly ILogger<AuthService> _logger;
 
-    public AuthService(RecipeDbContext db, IJwtService jwtService, IOtpService otpService, IEmailService emailService, IConfiguration config, ILogger<AuthService> logger)
+    public AuthService(RecipeDbContext db, IJwtService jwtService, IOtpService otpService,
+        IEmailService emailService, IConfiguration config, ILogger<AuthService> logger)
     {
-        _db = db; _jwtService = jwtService; _otpService = otpService; _emailService = emailService; _config = config; _logger = logger;
+        _db = db;
+        _jwtService = jwtService;
+        _otpService = otpService;
+        _emailService = emailService;
+        _config = config;
+        _logger = logger;
     }
 
-    public async Task<AuthResponse?> RegisterAsync(RegisterRequest request)
+    public async Task<ApiResponse<AuthResponse>> RegisterAsync(RegisterRequest request)
     {
-        _logger.LogInformation("Register attempt for {Email}", request.Email);
-
-        var existing = await _db.Users.FirstOrDefaultAsync(u => u.Email == request.Email.ToLower());
-        if (existing is not null)
+        try
         {
-            _logger.LogWarning("Registration failed - email already exists: {Email}", request.Email);
-            return null;
+            _logger.LogInformation("Register attempt for {Email}", request.Email);
+
+            var existing = await _db.Users.FirstOrDefaultAsync(u => u.Email == request.Email.ToLower());
+            if (existing is not null)
+            {
+                _logger.LogWarning("Registration failed - email already exists: {Email}", request.Email);
+                return ApiResponse<AuthResponse>.Fail("Email already registered.", 409, nameof(RegisterAsync));
+            }
+
+            var user = new User
+            {
+                Name = request.Name,
+                Email = request.Email.ToLower(),
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
+                CreatedAt = DateTime.UtcNow
+            };
+
+            _db.Users.Add(user);
+            await _db.SaveChangesAsync();
+            await _emailService.SendWelcomeEmailAsync(user.Email, user.Name);
+
+            _logger.LogInformation("User registered successfully: {Email}", request.Email);
+
+            var expiry = DateTime.UtcNow.AddMinutes(int.Parse(_config["JwtSettings:ExpiryMinutes"]!));
+            var token = _jwtService.GenerateToken(user.Id, user.Email, user.Name);
+
+            return ApiResponse<AuthResponse>.Ok(new AuthResponse
+            {
+                Token = token,
+                Email = user.Email,
+                Name = user.Name,
+                ExpiresAt = expiry
+            }, "Registration successful.");
         }
-
-        var user = new User
+        catch (Exception ex)
         {
-            Name = request.Name,
-            Email = request.Email.ToLower(),
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
-            CreatedAt = DateTime.UtcNow
-        };
-
-        _db.Users.Add(user);
-        await _db.SaveChangesAsync();
-        await _emailService.SendWelcomeEmailAsync(user.Email, user.Name);
-        _logger.LogInformation("User registered successfully: {Email}", request.Email);
-
-        var expiry = DateTime.UtcNow.AddMinutes(int.Parse(_config["JwtSettings:ExpiryMinutes"]!));
-        var token = _jwtService.GenerateToken(user.Id, user.Email, user.Name);
-
-        return new AuthResponse
-        {
-            Token = token,
-            Email = user.Email,
-            Name = user.Name,
-            ExpiresAt = expiry
-        };
+            _logger.LogError(ex, "Unexpected error in {Method}", nameof(RegisterAsync));
+            return ApiResponse<AuthResponse>.Fail("Something went wrong.", 500, nameof(RegisterAsync));
+        }
     }
 
-    public async Task<AuthResponse?> LoginAsync(LoginRequest request)
+    public async Task<ApiResponse<AuthResponse>> LoginAsync(LoginRequest request)
     {
-        _logger.LogInformation("Login attempt for {Email}", request.Email);
-
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == request.Email.ToLower());
-        if (user is null)
+        try
         {
-            _logger.LogWarning("Login failed - user not found: {Email}", request.Email);
-            return null;
+            _logger.LogInformation("Login attempt for {Email}", request.Email);
+
+            var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == request.Email.ToLower());
+            if (user is null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
+            {
+                _logger.LogWarning("Login failed for {Email}", request.Email);
+                return ApiResponse<AuthResponse>.Fail("Invalid email or password.", 401, nameof(LoginAsync));
+            }
+
+            _logger.LogInformation("User logged in successfully: {Email}", request.Email);
+
+            var expiry = DateTime.UtcNow.AddMinutes(int.Parse(_config["JwtSettings:ExpiryMinutes"]!));
+            var token = _jwtService.GenerateToken(user.Id, user.Email, user.Name);
+
+            return ApiResponse<AuthResponse>.Ok(new AuthResponse
+            {
+                Token = token,
+                Email = user.Email,
+                Name = user.Name,
+                ExpiresAt = expiry
+            }, "Login successful.");
         }
-
-        if (!BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
+        catch (Exception ex)
         {
-            _logger.LogWarning("Login failed - wrong password: {Email}", request.Email);
-            return null;
+            _logger.LogError(ex, "Unexpected error in {Method}", nameof(LoginAsync));
+            return ApiResponse<AuthResponse>.Fail("Something went wrong.", 500, nameof(LoginAsync));
         }
-
-        _logger.LogInformation("User logged in successfully: {Email}", request.Email);
-
-        var expiry = DateTime.UtcNow.AddMinutes(int.Parse(_config["JwtSettings:ExpiryMinutes"]!));
-        var token = _jwtService.GenerateToken(user.Id, user.Email, user.Name);
-
-        return new AuthResponse
-        {
-            Token = token,
-            Email = user.Email,
-            Name = user.Name,
-            ExpiresAt = expiry
-        };
     }
 
-    public async Task<bool> ForgotPasswordAsync(ForgotPasswordRequest request)
+    public async Task<ApiResponse<bool>> ForgotPasswordAsync(ForgotPasswordRequest request)
     {
-        _logger.LogInformation("Forgot password request for {Email}", request.Email);
-
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == request.Email.ToLower());
-        if (user is null)
+        try
         {
-            // Return true anyway to avoid email enumeration
-            _logger.LogWarning("Forgot password - user not found: {Email}", request.Email);
-            return true;
+            _logger.LogInformation("Forgot password request for {Email}", request.Email);
+
+            var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == request.Email.ToLower());
+            if (user is not null)
+            {
+                var otpCode = await _otpService.GenerateAndStoreOtpAsync(user.Id);
+                await _emailService.SendOtpEmailAsync(user.Email, user.Name, otpCode);
+                _logger.LogInformation("OTP sent to {Email}", request.Email);
+            }
+
+            return ApiResponse<bool>.Ok(true, "If the email exists, an OTP has been sent.");
         }
-
-        var otpCode = await _otpService.GenerateAndStoreOtpAsync(user.Id);
-        await _emailService.SendOtpEmailAsync(user.Email, user.Name, otpCode);
-
-        _logger.LogInformation("OTP sent to {Email}", request.Email);
-        return true;
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error in {Method}", nameof(ForgotPasswordAsync));
+            return ApiResponse<bool>.Fail("Something went wrong.", 500, nameof(ForgotPasswordAsync));
+        }
     }
 
-    public async Task<bool> ResetPasswordAsync(ResetPasswordRequest request)
+    public async Task<ApiResponse<bool>> ResetPasswordAsync(ResetPasswordRequest request)
     {
-        _logger.LogInformation("Reset password attempt for {Email}", request.Email);
-
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == request.Email.ToLower());
-        if (user is null)
+        try
         {
-            _logger.LogWarning("Reset password - user not found: {Email}", request.Email);
-            return false;
-        }
+            _logger.LogInformation("Reset password attempt for {Email}", request.Email);
 
-        var isValid = await _otpService.ValidateOtpAsync(user.Id, request.OtpCode);
-        if (!isValid)
+            var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == request.Email.ToLower());
+            if (user is null)
+            {
+                _logger.LogWarning("Reset password - user not found: {Email}", request.Email);
+                return ApiResponse<bool>.Fail("Invalid or expired OTP.", 400, nameof(ResetPasswordAsync));
+            }
+
+            var isValid = await _otpService.ValidateOtpAsync(user.Id, request.OtpCode);
+            if (!isValid)
+            {
+                _logger.LogWarning("Reset password - invalid OTP for {Email}", request.Email);
+                return ApiResponse<bool>.Fail("Invalid or expired OTP.", 400, nameof(ResetPasswordAsync));
+            }
+
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+            await _db.SaveChangesAsync();
+
+            _logger.LogInformation("Password reset successfully for {Email}", request.Email);
+            return ApiResponse<bool>.Ok(true, "Password reset successful.");
+        }
+        catch (Exception ex)
         {
-            _logger.LogWarning("Reset password - invalid OTP for {Email}", request.Email);
-            return false;
+            _logger.LogError(ex, "Unexpected error in {Method}", nameof(ResetPasswordAsync));
+            return ApiResponse<bool>.Fail("Something went wrong.", 500, nameof(ResetPasswordAsync));
         }
-
-        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
-        await _db.SaveChangesAsync();
-
-        _logger.LogInformation("Password reset successfully for {Email}", request.Email);
-        return true;
     }
 }

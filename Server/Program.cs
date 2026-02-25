@@ -9,7 +9,6 @@ using Microsoft.OpenApi.Models;
 using Serilog;
 using Server.DTOs.Response;
 using Server.Mapping;
-using Server.Middleware;
 using Server.Models;
 using Server.Repositories;
 using Server.Repositories.Interfaces;
@@ -57,19 +56,20 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         {
             OnChallenge = async context =>
             {
-                context.HandleResponse(); 
+                context.HandleResponse();
 
                 context.Response.StatusCode = 401;
                 context.Response.ContentType = "application/json";
 
-                var error = new ApiError
-                {
-                    Code = 401,
-                    Message = "You are not authenticated. Please login to access this resource.",
-                    Location = context.Request.Path.ToString()
-                };
+                var endpoint = context.HttpContext.GetEndpoint();
+                var methodName = endpoint?.Metadata.GetMetadata<Microsoft.AspNetCore.Mvc.Controllers.ControllerActionDescriptor>()?.ActionName
+                                 ?? "Unknown";
 
-                var response = ApiResponse<object>.Fail("Unauthorized.", new[] { error });
+                var response = ApiResponse<object>.Fail(
+                    "Unauthorized.",
+                    401,
+                    methodName
+                );
 
                 var json = JsonSerializer.Serialize(response, new JsonSerializerOptions
                 {
@@ -84,14 +84,15 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 context.Response.StatusCode = 403;
                 context.Response.ContentType = "application/json";
 
-                var error = new ApiError
-                {
-                    Code = 403,
-                    Message = "You do not have permission to access this resource.",
-                    Location = context.Request.Path.ToString()
-                };
+                var endpoint = context.HttpContext.GetEndpoint();
+                var methodName = endpoint?.Metadata.GetMetadata<Microsoft.AspNetCore.Mvc.Controllers.ControllerActionDescriptor>()?.ActionName
+                                 ?? "Unknown";
 
-                var response = ApiResponse<object>.Fail("Forbidden.", new[] { error });
+                var response = ApiResponse<object>.Fail(
+                    "Forbidden.",
+                    403,
+                    methodName
+                );
 
                 var json = JsonSerializer.Serialize(response, new JsonSerializerOptions
                 {
@@ -164,7 +165,6 @@ try
 
     app.UseHttpsRedirection();
     app.UseCors();
-    app.UseMiddleware<GlobalExceptionMiddleware>();
 
     app.UseAuthentication();
     app.UseAuthorization();

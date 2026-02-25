@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Server.DTOs.Request;
 using Server.Models;
 using Server.Repositories.Interfaces;
 
@@ -13,20 +14,50 @@ namespace Server.Repositories
             _db = db;
             _logger = logger;
         }
-        public async Task<List<Recipe>> GetAllAsync()
+        public async Task<(List<Recipe> Items, int TotalCount)> GetAllAsync(PagedRequest request)
         {
-            _logger.LogInformation("Getting all recipes");
-            var recipes = await _db.Recipes.ToListAsync();
-            _logger.LogInformation("Got all recipes");
-            return recipes;
-            
+            _logger.LogInformation("Getting all recipes - Page: {Page}, Search: {Search}", request.Page, request.Search);
+
+            var query = _db.Recipes.AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(request.Search))
+                query = query.Where(r => r.Title.Contains(request.Search) ||
+                                         r.Description.Contains(request.Search));
+
+            var totalCount = await query.CountAsync();
+
+            var items = await query
+                .OrderByDescending(r => r.Id)
+                .Skip((request.Page - 1) * request.PageSize)
+                .Take(request.PageSize)
+                .ToListAsync();
+
+            _logger.LogInformation("Got {Count} of {Total} recipes", items.Count, totalCount);
+            return (items, totalCount);
         }
-        public async Task<List<Recipe>>GetMyRecipesAsync(int userId)
+        public async Task<(List<Recipe> Items, int TotalCount)> GetMyRecipesAsync(int userId, PagedRequest request)
         {
-            _logger.LogInformation("Getting recipes for user id: {userId}", userId);
-            var recipes = await _db.Recipes.Where(r => r.UserId == userId).ToListAsync();
-            _logger.LogInformation("Got recipes for user id: {userId}", userId);
-            return recipes;
+            _logger.LogInformation("Getting recipes for userId: {UserId} - Page: {Page}, Search: {Search}",
+                userId, request.Page, request.Search);
+
+            var query = _db.Recipes
+                .Where(r => r.UserId == userId)
+                .AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(request.Search))
+                query = query.Where(r => r.Title.Contains(request.Search) ||
+                                         r.Description.Contains(request.Search));
+
+            var totalCount = await query.CountAsync();
+
+            var items = await query
+                .OrderByDescending(r => r.Id)
+                .Skip((request.Page - 1) * request.PageSize)
+                .Take(request.PageSize)
+                .ToListAsync();
+
+            _logger.LogInformation("Got {Count} of {Total} recipes for userId: {UserId}", items.Count, totalCount, userId);
+            return (items, totalCount);
         }
         public async Task<Recipe?> GetByIdAsync(int id)
         {

@@ -110,13 +110,12 @@ public class CreateRecipeValidator : AbstractValidator<CreateRecipeRequest>
 
         RuleFor(x => x.Image)
         .NotNull().WithMessage("Image is required.")
-        .Must(file => file!.Length > 0).WithMessage("Image file cannot be empty.")
-        .Must(file => file!.Length <= 5 * 1024 * 1024).WithMessage("Image must not exceed 5MB.")
         .Must(file =>
         {
             var allowed = new[] { "image/jpeg", "image/png", "image/webp" };
             return allowed.Contains(file!.ContentType.ToLower());
         }).WithMessage("Image must be a JPEG, PNG, or WebP file.");
+
 
     }
 }

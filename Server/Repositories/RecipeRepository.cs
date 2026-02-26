@@ -21,8 +21,13 @@ namespace Server.Repositories
             var query = _db.Recipes.AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(request.Search))
-                query = query.Where(r => r.Title.Contains(request.Search) ||
-                                         r.Description.Contains(request.Search));
+            {
+                var keywords = request.Search.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                query = query.Where(r => keywords.Any(k =>
+                    r.Title.Contains(k) ||
+                    r.Description.Contains(k) ||
+                    r.Ingredients.Contains(k)));
+            }
 
             var totalCount = await query.CountAsync();
 
@@ -45,8 +50,13 @@ namespace Server.Repositories
                 .AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(request.Search))
-                query = query.Where(r => r.Title.Contains(request.Search) ||
-                                         r.Description.Contains(request.Search));
+            {
+                var keywords = request.Search.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                query = query.Where(r => keywords.Any(k =>
+                    r.Title.Contains(k) ||
+                    r.Description.Contains(k) ||
+                    r.Ingredients.Contains(k)));
+            }
 
             var totalCount = await query.CountAsync();
 
@@ -82,7 +92,6 @@ namespace Server.Repositories
         }
         public async Task<Recipe?> UpdateAsync(Recipe recipe)
         {
-            var existingRecipe = await _db.Recipes.FindAsync(recipe.Id);
             _logger.LogInformation("Updating recipe with id: {id}", recipe.Id);
             _db.Recipes.Update(recipe);
             await _db.SaveChangesAsync();

@@ -24,7 +24,7 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> Register([FromBody] RegisterRequest request)
     {
         var result = await _authService.RegisterAsync(request);
-        return StatusCode(result.Success ? 200 : result.Errors!.First().Code, result);
+        return StatusCode(result.Success ? 200 : (result.Errors?.FirstOrDefault()?.Code ?? 500), result);
     }
 
     [AllowAnonymous]
@@ -32,7 +32,7 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {
         var result = await _authService.LoginAsync(request);
-        return StatusCode(result.Success ? 200 : result.Errors!.First().Code, result);
+        return StatusCode(result.Success ? 200 : (result.Errors?.FirstOrDefault()?.Code ?? 500), result);
     }
 
     [AllowAnonymous]
@@ -40,7 +40,7 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request)
     {
         var result = await _authService.ForgotPasswordAsync(request);
-        return StatusCode(result.Success ? 200 : result.Errors!.First().Code, result);
+        return StatusCode(result.Success ? 200 : (result.Errors?.FirstOrDefault()?.Code ?? 500), result);
     }
 
     [AllowAnonymous]
@@ -48,6 +48,6 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request)
     {
         var result = await _authService.ResetPasswordAsync(request);
-        return StatusCode(result.Success ? 200 : result.Errors!.First().Code, result);
+        return StatusCode(result.Success ? 200 : (result.Errors?.FirstOrDefault()?.Code ?? 500), result);
     }
 }

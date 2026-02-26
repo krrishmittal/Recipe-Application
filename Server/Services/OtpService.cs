@@ -43,7 +43,8 @@ public class OtpService : IOtpService
                 UserId = userId,
                 OtpCode = hash,
                 ExpiresAt = DateTime.UtcNow.AddMinutes(expiry),
-                IsUsed = false
+                IsUsed = false,
+                CreatedAt=DateTime.UtcNow
             };
             await _db.OtpRecords.AddAsync(record);
         }

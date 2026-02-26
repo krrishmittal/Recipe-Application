@@ -12,12 +12,12 @@ public class RegisterRequestValidator : AbstractValidator<RegisterRequest>
         .NotEmpty().WithMessage("Name is required")
         .MinimumLength(4).WithMessage("Name must be at least 4 characters")
         .MaximumLength(20).WithMessage("Name must not exceed 20 characters")
-        .Matches(@"[a-zA-Z\s\-']$").WithMessage("Name can only contain letters, spaces, hyphens, and apostrophes.");
+        .Matches(@"^[a-zA-Z\s\-']+$").WithMessage("Name can only contain letters, spaces, hyphens, and apostrophes.");
 
         RuleFor(x => x.Email)
         .NotEmpty().WithMessage("Email is required")
         .MaximumLength(200).WithMessage("Email must not exceed 200 characters")
-        .EmailAddress().WithMessage("A valid email addres is required");
+        .EmailAddress().WithMessage("A valid email address is required");
 
         RuleFor(x => x.Password)
         .NotEmpty().WithMessage("Password is required")
@@ -25,7 +25,7 @@ public class RegisterRequestValidator : AbstractValidator<RegisterRequest>
         .Matches(@"[A-Z]").WithMessage("Password must contain atleast one uppercase character")
         .Matches(@"[a-z]").WithMessage("Password must contain atleast one lowercase character")
         .Matches(@"[0-9]").WithMessage("Password must contain atleast one number")
-        .Matches(@"[\W]").WithMessage("Password must contain atleasat one special character");
+        .Matches(@"[\W]").WithMessage("Password must contain at least one special character");
 
     }
 }
@@ -85,7 +85,7 @@ public class CreateRecipeValidator : AbstractValidator<CreateRecipeRequest>
         RuleFor(x => x.Title)
         .NotEmpty().WithMessage("Title is required")
         .MinimumLength(3).WithMessage("Title must be at least 3 characters")
-        .MaximumLength(200).WithMessage("Totle must not exceed 20 characters");
+        .MaximumLength(200).WithMessage("Title must not exceed 200 characters");
 
         RuleFor(x => x.Description)
         .NotEmpty().WithMessage("Description is required")
@@ -100,7 +100,7 @@ public class CreateRecipeValidator : AbstractValidator<CreateRecipeRequest>
         RuleFor(x => x.CookTimeMinutes)
         .NotEmpty().WithMessage("Cooking Time is required")
         .GreaterThanOrEqualTo(0).WithMessage("Cooking time cannot be negative")
-        .LessThanOrEqualTo(300).WithMessage("Cooking time must must not exceed 300 mintues (5 hours)");
+        .LessThanOrEqualTo(300).WithMessage("Cooking time must not exceed 300 minutes (5 hours)");
 
         RuleFor(x => x.Ingredients)
         .NotEmpty().WithMessage("Ingredients are required");

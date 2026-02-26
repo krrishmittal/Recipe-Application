@@ -9,7 +9,7 @@ namespace Server.Controllers;
 
 [ApiController]
 [Route("api/recipes")]
-[Authorize]
+//[Authorize]
 public class RecipesController : ControllerBase
 {
     private readonly IRecipeService _recipeService;
@@ -28,14 +28,14 @@ public class RecipesController : ControllerBase
     public async Task<IActionResult> GetAll([FromQuery] PagedRequest request)
     {
         var result = await _recipeService.GetAllAsync(request);
-        return StatusCode(result.Success ? 200 : result.Errors!.First().Code, result);
+        return StatusCode(result.Success ? 200 : (result.Errors?.FirstOrDefault()?.Code ?? 500), result);
     }
 
     [HttpGet("my-recipes")]
     public async Task<IActionResult> GetMyRecipes([FromQuery] PagedRequest request)
     {
         var result = await _recipeService.GetMyRecipesAsync(request);
-        return StatusCode(result.Success ? 200 : result.Errors!.First().Code, result);
+        return StatusCode(result.Success ? 200 : (result.Errors?.FirstOrDefault()?.Code ?? 500), result);
     }
 
     [AllowAnonymous]
@@ -43,27 +43,27 @@ public class RecipesController : ControllerBase
     public async Task<IActionResult> GetById(int id)
     {
         var result = await _recipeService.GetByIdAsync(id);
-        return StatusCode(result.Success ? 200 : result.Errors!.First().Code, result);
+        return StatusCode(result.Success ? 200 : (result.Errors?.FirstOrDefault()?.Code ?? 500), result);
     }
 
     [HttpPost]
     public async Task<IActionResult> Create([FromForm] CreateRecipeRequest request)
     {
         var result = await _recipeService.CreateAsync(GetUserId(), request);
-        return StatusCode(result.Success ? 201 : result.Errors!.First().Code, result);
+        return StatusCode(result.Success ? 201 : (result.Errors?.FirstOrDefault()?.Code ?? 500), result);
     }
 
     [HttpPut("{id:int}")]
     public async Task<IActionResult> Update(int id, [FromForm] UpdateRecipeRequest request)
     {
         var result = await _recipeService.UpdateAsync(id, GetUserId(), request);
-        return StatusCode(result.Success ? 200 : result.Errors!.First().Code, result);
+        return StatusCode(result.Success ? 200 : (result.Errors?.FirstOrDefault()?.Code ?? 500), result);
     }
 
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id)
     {
         var result = await _recipeService.DeleteAsync(id, GetUserId());
-        return StatusCode(result.Success ? 200 : result.Errors!.First().Code, result);
+        return StatusCode(result.Success ? 200 : (result.Errors?.FirstOrDefault()?.Code ?? 500), result);
     }
 }

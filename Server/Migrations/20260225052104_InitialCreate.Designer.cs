@@ -12,7 +12,7 @@ using Server.Models;
 namespace Server.Migrations
 {
     [DbContext(typeof(RecipeDbContext))]
-    [Migration("20260223155553_InitialCreate")]
+    [Migration("20260225052104_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />

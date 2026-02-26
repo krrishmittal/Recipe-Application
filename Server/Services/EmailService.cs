@@ -38,7 +38,8 @@ public class EmailService : IEmailService
         {
             var settings = _config.GetSection("EmailSettings");
             var body = LoadTemplate("WelcomeTemplate.html")
-                            .Replace("{{NAME}}", name);
+                            .Replace("{{NAME}}", name)
+                            .Replace("{{CURRENT_YEAR}}", DateTime.Now.Year.ToString());
 
             var mail = new MailMessage
             {
@@ -69,7 +70,8 @@ public class EmailService : IEmailService
             var body = LoadTemplate("OtpTemplate.html")
                             .Replace("{{NAME}}", name)
                             .Replace("{{OTP_CODE}}", otpCode)
-                            .Replace("{{EXPIRY_MINUTES}}", _config["OtpSettings:ExpiryMinutes"]);
+                            .Replace("{{EXPIRY_MINUTES}}", _config["OtpSettings:ExpiryMinutes"])
+                            .Replace("{{CURRENT_YEAR}}", DateTime.Now.Year.ToString());
 
             var mail = new MailMessage
             {

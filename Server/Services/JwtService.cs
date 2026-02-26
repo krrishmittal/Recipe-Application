@@ -1,6 +1,5 @@
 ﻿using Server.Services.Interfaces;
 using Microsoft.IdentityModel.Tokens;
-using Server.Services.Interfaces;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;

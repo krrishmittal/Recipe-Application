@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Recipe.Domain\Recipe.Domain.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FluentValidation" Version="12.1.1" />
+    <PackageReference Include="MediatR" Version="11.1.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.3.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="GlobalUsings.cs" />
+    <Compile Include="DTOs\**\*.cs" />
+    <Compile Include="Features\AssemblyMarker.cs" />
+    <Compile Include="Features\Common\**\*.cs" />
+    <Compile Include="Features\**\*Command.cs" />
+    <Compile Include="Features\**\*Query.cs" />
+    <Compile Include="Features\**\*Validator.cs" />
+    <Compile Include="Services\Interfaces\**\*.cs" />
+  </ItemGroup>
+
+</Project>

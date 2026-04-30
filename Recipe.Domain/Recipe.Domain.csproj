@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="Models\Recipe.cs" />
+    <Compile Include="Models\User.cs" />
+    <Compile Include="Models\OtpRecord.cs" />
+    <Compile Include="Models\FavoriteRecipe.cs" />
+    <Compile Include="Models\Category.cs" />
+    <Compile Include="Models\Tag.cs" />
+    <Compile Include="Models\RecipeTag.cs" />
+    <Compile Include="Models\RecipeComment.cs" />
+    <Compile Include="Models\RecipeRating.cs" />
+  </ItemGroup>
+
+</Project>

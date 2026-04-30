@@ -5,6 +5,8 @@
 
 
 appsettings.json
+.env
+**/.env
 
 bin/
 obj/
@@ -367,3 +369,6 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# VS Code C# Dev Tools - Auto-generated runners
+.vscodecsdt/
